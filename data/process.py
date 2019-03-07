@@ -94,7 +94,7 @@ def get_docs(file_path):
 # gensim 加载问题！！！
 def doc2vec(vector_dir, docs):
     all_doc_vectors = []
-    word2vec_model = gensim.models.keyedvectors._load_word2vec_format(vector_dir, binary=False)
+    word2vec_model = gensim.models.KeyedVectors.load_word2vec_format(fname=vector_dir, binary=False)
     # word2vev_model = gensim.models.keyedvectors._load_word2vec_format(datapath(vector_dir), binary=False)
     for i in range(len(docs)):
         doc = docs[i]
@@ -137,6 +137,6 @@ def get_topN_sim(all_doc_sim, topN):
 if __name__ == '__main__':
     vector_dir = 'sg.word2vec.300d'
     file_path = 'doc_test.txt'
-    # docs = get_docs(file_path)
-    # all_doc_vectors = doc2vec(vector_dir, docs)
-    load_all_data(file_path)
+    docs = get_docs(file_path)
+    all_doc_vectors = doc2vec(vector_dir, docs)
+    # load_all_data(file_path)
