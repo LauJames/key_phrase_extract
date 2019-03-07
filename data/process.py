@@ -166,7 +166,7 @@ def get_external(topN_doc_sims, all_original_kp):
 # 目标文档本身权重 p  外部文档权重 1-p
 def merge(original_dict, external_dict, p):
     merge_dict = {}
-    all_keys = original_dict.keys() | external_dict.keys()
+    # all_keys = original_dict.keys() | external_dict.keys()
     for original_key in original_dict:
         # 原文档有 外部文档没有
         if not external_dict.__contains__(original_dict):
