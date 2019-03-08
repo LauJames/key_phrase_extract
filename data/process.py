@@ -34,28 +34,61 @@ def clean_str(string):
     return string.strip().lower()
 
 
-def load_all_data(file_path):
-    docs = []
-    key_phrases = []
-    key_phrase_extracs = []
-    with codecs.open(filename=file_path, encoding='utf-8') as fp:
+# 加载词典
+def load_vocab(vacab_dir):
+    vocab = []
+    with codecs.open(filename=vacab_dir, encoding='utf-8') as fp:
         while True:
             line = fp.readline()
             if not line:
+                print('get vacab successful!')
+                return vocab
+
+            tmp = line.strip().split(' ')
+            vocab.append(tmp[0])
+
+
+def load_all_data(file_path, vocab):
+    docs = []
+    key_phrases = []
+    key_phrase_extracs = []
+    line_num = 0
+    with codecs.open(filename=file_path, encoding='utf-8') as fp:
+        while True:
+            line_num += 1
+            print(line_num)
+            line = fp.readline()
+            if not line:
                 print('get_headerFile successful!')
-                docs = [clean_str(str(doc)) for doc in docs]
+                # docs = [clean_str(str(doc)) for doc in docs]
                 return [docs, key_phrases, key_phrase_extracs]
 
             tmp = line.strip().split('\t')
-            docs.append(clean_str(tmp[0]).split(' '))
+            doc_split = clean_str(tmp[0]).split(' ')
+            for i in range(len(doc_split)):
+                if not vocab.__contains__(doc_split[i]):
+                    doc_split[i] = 'unknown'
+            # print(doc_split)
+            # print('\n')
+            docs.append(doc_split)
 
+            print(tmp)
             key_phrases.append(tmp[1].split(';'))
 
             extracs_tmp = tmp[2].split(';')
             doc_phrase_weight = {}
             for i in range(len(extracs_tmp)):
                 extracs_phrase_weight = extracs_tmp[i].split('|||')
-                doc_phrase_weight.update({extracs_phrase_weight[1]: float(extracs_phrase_weight[0])})
+                try:
+                    doc_phrase_weight.update({extracs_phrase_weight[1]: float(extracs_phrase_weight[0])})
+                except IndexError:
+                    print('该行提取的关键术语数据有误：'+ str(tmp[2]))
+                    print('具体数据错误：' + str(extracs_phrase_weight))
+
+                else:
+                    doc_phrase_weight.update({extracs_phrase_weight[1]: float(extracs_phrase_weight[0])})
+                # doc_phrase_weight.update({extracs_phrase_weight[1]: float(extracs_phrase_weight[0])})
+
             # 按value升序排序
             # doc_phrase_weight = sorted(doc_phrase_weight.items(), key=operator.itemgetter(1))
 
@@ -63,19 +96,16 @@ def load_all_data(file_path):
             # doc_phrase_weight = sorted(doc_phrase_weight.items(), key=lambda d: d[1], reverse=True)
             key_phrase_extracs.append(doc_phrase_weight)
 
-            print(doc_phrase_weight[0:3] )
+            # print(key_phrase_extracs[:,:,0:3] )
             # print(doc_phrase_weight[0:3] +  '   '+ str(doc_phrase_weight[0][1]))
 
-            # print(tmp[0])
-            # print("=====" )
-            # print(tmp[1])
-            # print("=====" + str(tmp[1].split(';')))
-            print(tmp[2])
-            print("=====" + str(doc_phrase_weight) + '\n')
+            # print(tmp[2])
+            # print("=====" + str(doc_phrase_weight) + '\n')
+
+
 
 # 对每篇文章分词
 def get_docs(file_path):
-
     docs = []
     with codecs.open(filename=file_path, encoding='utf-8') as fp:
         while True:
@@ -94,16 +124,22 @@ def get_docs(file_path):
 # 加载词向量/计算文档向量
 def doc2vec(vector_dir, docs):
     all_doc_vectors = []
+    print('加载词向量模型...')
     word2vec_model = gensim.models.KeyedVectors.load_word2vec_format(fname=vector_dir, binary=False)
+    print('词向量模型加载完毕！')
+    # v1 = word2vec_model['virtually']
+    # print(v1)
     # word2vev_model = gensim.models.keyedvectors._load_word2vec_format(datapath(vector_dir), binary=False)
     for i in range(len(docs)):
         doc = docs[i]
+        print(doc)
         vector = np.zeros(300)
         for j in range(len(doc)):
             vector = vector + np.array(word2vec_model[doc[j]])
         # 文档向量：词向量取均值
         doc_vector = vector / len(doc)
         all_doc_vectors.append(doc_vector)
+    print('文档向量计算完毕！\n')
     return np.array(all_doc_vectors)
 
 
@@ -126,6 +162,7 @@ def calculate_doc_sim(doc_vectors):
         # 按value值降序排序 ============v1_sim转换成了list
         v1_sim = sorted(v1_sim.items(), key=lambda d: d[1], reverse=True)
         all_doc_sim.append(v1_sim)
+    print('文档相似度计算完毕！\n')
     return all_doc_sim
 
 
@@ -135,7 +172,7 @@ def get_topN_sim(all_doc_sim, topN):
 
 
 # 对于一篇文档： 融合其topN篇相似的外部文档的全部key phrase
-def get_external(topN_doc_sims, all_original_kp):
+def get_external(topN_doc_sims, all_original_kp, currunt_docID):
     # topN_doc_sims:[(6,0.9),(10,0.8),(3,0.5)...],topN * 2 一篇文档的相似文档及相似度集合
     # all_original_kp: 所有文档的原始关键术语
     external_key_phrase = {}
@@ -145,19 +182,27 @@ def get_external(topN_doc_sims, all_original_kp):
         sim = topN_doc_sims[i][1]
         # 获取第i篇与本篇doc相似的文档id
         sim_docID = topN_doc_sims[i][0]
-        # 根据相似文档id获取相似文档的关键术语
-        sim_doc_keys = all_original_kp[sim_docID]
-        for j in range(len(sim_doc_keys)):
-            if not key_phrases.__contains__(sim_doc_keys[i]):
-                key_phrases.update({sim_doc_keys[i]: [sim]})
-            else:
-                sim_list = key_phrases[sim_doc_keys[i]]
-                sim_list.append(sim)
-                key_phrases.update({sim_doc_keys[i]: sim_list})
+
+        # 跳过当前文档
+        if sim_docID != currunt_docID :
+            # 根据相似文档id获取相似文档的关键术语
+            sim_doc_keys = all_original_kp[sim_docID]
+            for j in range(len(sim_doc_keys)):
+                key = sim_doc_keys[j]
+                if not key_phrases.__contains__(sim_doc_keys[j]):
+                    key_phrases.update({sim_doc_keys[j]: [sim]})
+                else:
+                    sim_list = key_phrases[sim_doc_keys[j]]
+                    sim_list.append(sim)
+                    key_phrases.update({sim_doc_keys[j]: sim_list})
+
     #  计算每个key phrase的权重均值
     for key in key_phrases:
         sim_array = np.array(key_phrases[key])
-        key_weight = np.average(sim_array)
+        # 融合权重：取均值
+        # key_weight = np.average(sim_array)
+        # 融合权重：求和
+        key_weight = np.sum(sim_array)
         external_key_phrase.update({key : key_weight})
     return external_key_phrase
 
@@ -169,7 +214,7 @@ def merge(original_dict, external_dict, p):
     # all_keys = original_dict.keys() | external_dict.keys()
     for original_key in original_dict:
         # 原文档有 外部文档没有
-        if not external_dict.__contains__(original_dict):
+        if not external_dict.__contains__(original_key):
             weight = p * original_dict[original_key]
         # 原文档有 外部文档也有
         else:
@@ -188,20 +233,44 @@ def merge(original_dict, external_dict, p):
 def extract_all(all_doc_sim, all_original_kp, topN,  all_kp_extracs, p):
     all_merged_kp = []
     for i in range(len(all_doc_sim)):
-        topN_doc_sims = all_doc_sim[i,:,0:2]
-        external_dict = get_external(topN_doc_sims,all_original_kp)
+        shape = np.array(all_doc_sim).shape
+        topN_doc_sims = all_doc_sim[i][:topN]
+        external_dict = get_external(topN_doc_sims,all_original_kp, currunt_docID=i)
         original_dict = all_kp_extracs[i]
         one_merge_dict = merge(original_dict,external_dict,p)
         all_merged_kp.append(one_merge_dict)
     return all_merged_kp
 
 
+def save_to_txt(result_list, save_dir):
+    fp = codecs.open(filename=save_dir, mode='w', encoding='utf-8',)
+    for i in range(len(result_list)):
+        line = str(sorted(result_list[i].items(), key=lambda d: d[1], reverse=True))
+        fp.write(line + '\n')
+    fp.close()
 
 
 if __name__ == '__main__':
     vector_dir = 'sg.word2vec.300d'
     file_path = 'doc_test.txt'
-    docs = get_docs(file_path)
+    vocab_dir ='vocab_sg300d.txt'
+    save_dir = 'merged_results.txt'
+    vocab = load_vocab(vocab_dir)
+    docs, all_original_kp, all_kp_extracs = load_all_data(file_path, vocab)
     all_doc_vectors = doc2vec(vector_dir, docs)
-    docs, all_original_kp, all_kp_extracs = load_all_data(file_path)
+    all_doc_sim = calculate_doc_sim(all_doc_vectors)
+
+    doc_sim = calculate_doc_sim(all_doc_vectors)
+    for i in range(len(doc_sim)):
+        print('doc'+ str(i))
+        print(str(doc_sim[i]))
+        print('\n')
+
+
+    # all_merged_kp = extract_all(all_doc_sim, all_original_kp, 2, all_kp_extracs,0.6)
+    # print('内外部融合结果：')
+    # for i in range(len(all_merged_kp)):
+    #     print(sorted(all_merged_kp[i].items(), key=lambda d: d[1], reverse=True))
+    # save_to_txt(all_merged_kp, save_dir)
+
 
