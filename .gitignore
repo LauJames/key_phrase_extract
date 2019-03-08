@@ -107,3 +107,6 @@ venv.bak/
 
 /data/all_title_abstract_keyword_clean.json
 /.idea/
+/data/rake_extract_keyphrase.json
+/data/rake_extract_keyphrase.txt
+/data/stopwords.txt
