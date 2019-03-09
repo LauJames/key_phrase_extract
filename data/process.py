@@ -234,7 +234,7 @@ def extract_all(all_doc_sim, all_original_kp, topN,  all_kp_extracs, p):
     all_merged_kp = []
     for i in range(len(all_doc_sim)):
         shape = np.array(all_doc_sim).shape
-        topN_doc_sims = all_doc_sim[i][:topN]
+        topN_doc_sims = all_doc_sim[i][:topN+1] # 相似文档里包含里目标文档本身
         external_dict = get_external(topN_doc_sims,all_original_kp, currunt_docID=i)
         original_dict = all_kp_extracs[i]
         one_merge_dict = merge(original_dict,external_dict,p)
@@ -242,7 +242,7 @@ def extract_all(all_doc_sim, all_original_kp, topN,  all_kp_extracs, p):
     return all_merged_kp
 
 
-def save_to_txt(result_list, save_dir):
+def save_merged_results(result_list, save_dir):
     fp = codecs.open(filename=save_dir, mode='w', encoding='utf-8',)
     for i in range(len(result_list)):
         line = str(sorted(result_list[i].items(), key=lambda d: d[1], reverse=True))
@@ -250,27 +250,72 @@ def save_to_txt(result_list, save_dir):
     fp.close()
 
 
+def evaluate(merged_kp, original_kp):
+    precision = []
+    recall = []
+    doc_num = len(original_kp)
+    for i in range(doc_num):
+        #  计算每一篇文档的p和r
+        correct_num = 0
+        for j in range(len(merged_kp)):
+            if original_kp.__contains__(merged_kp[i][j]):
+                correct_num += 1
+        pi = correct_num / len(merged_kp[i])
+        ri = correct_num / len(original_kp[i])
+        precision.append(pi)
+        recall.append(ri)
+    # 计算全部文档的平均p和r
+    precision = np.array(precision)
+    recall = np.array(recall)
+    precision_avg = np.average(precision)
+    recall_avg = np.average(recall)
+    f = (2 * precision_avg * recall_avg) / (precision_avg + recall_avg)
+
+    return precision_avg, recall_avg, f, precision,recall
+
+
+def save_evaluate_results(result_array, save_dir):
+    fp = codecs.open(filename=save_dir, mode='w', encoding='utf-8',)
+    for i in range(len(result_array)):
+        line = str(result_array[i])
+        fp.write(str(i) + ":" + line + '\n')
+    fp.close()
+
 if __name__ == '__main__':
     vector_dir = 'sg.word2vec.300d'
     file_path = 'doc_test.txt'
     vocab_dir ='vocab_sg300d.txt'
-    save_dir = 'merged_results.txt'
+    merged_results_dir = 'merged_results.txt'
+    precision_dir = 'precision.txt'
+    recall_dir = 'recall.txt'
+
+    # prepare for data
     vocab = load_vocab(vocab_dir)
     docs, all_original_kp, all_kp_extracs = load_all_data(file_path, vocab)
     all_doc_vectors = doc2vec(vector_dir, docs)
     all_doc_sim = calculate_doc_sim(all_doc_vectors)
 
-    doc_sim = calculate_doc_sim(all_doc_vectors)
-    for i in range(len(doc_sim)):
-        print('doc'+ str(i))
-        print(str(doc_sim[i]))
-        print('\n')
+    # doc_sim = calculate_doc_sim(all_doc_vectors)
+    # for i in range(len(doc_sim)):
+    #     print('doc'+ str(i))
+    #     print(str(doc_sim[i]))
+    #     print('\n')
+
+    # merge:
+    all_merged_kp = extract_all(all_doc_sim, all_original_kp, 2, all_kp_extracs,0.6)
+    print('内外部融合结果：')
+    for i in range(len(all_merged_kp)):
+        print(sorted(all_merged_kp[i].items(), key=lambda d: d[1], reverse=True))
+    save_merged_results(all_merged_kp, merged_results_dir)
+
+    # evaluate:
+    precision_avg, recall_avg, f, precision, recall = evaluate(all_merged_kp, all_original_kp)
+    save_evaluate_results(precision, precision_dir)
+    save_evaluate_results(recall, recall_dir)
+    print('平均检准率： ' + precision_avg)
+    print('平均检全率： ' + recall_avg)
+    print('F值： ' + f)
 
 
-    # all_merged_kp = extract_all(all_doc_sim, all_original_kp, 2, all_kp_extracs,0.6)
-    # print('内外部融合结果：')
-    # for i in range(len(all_merged_kp)):
-    #     print(sorted(all_merged_kp[i].items(), key=lambda d: d[1], reverse=True))
-    # save_to_txt(all_merged_kp, save_dir)
 
 
