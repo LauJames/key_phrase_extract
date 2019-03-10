@@ -8,6 +8,7 @@ import gensim
 from gensim.test.utils import datapath
 from numpy import linalg
 import operator
+import nltk
 
 
 def clean_str(string):
@@ -242,14 +243,6 @@ def extract_all(all_doc_sim, all_original_kp, topN,  all_kp_extracs, p):
     return all_merged_kp
 
 
-# 对融合的全部结果排序后写入文件
-def save_all_merged_results(result_list, save_dir):
-    fp = codecs.open(filename=save_dir, mode='w', encoding='utf-8')
-    for i in range(len(result_list)):
-        line = str(sorted(result_list[i].items(), key=lambda d: d[1], reverse=True))
-        fp.write(line + '\n')
-    fp.close()
-
 
 # 获取每篇文档的topK个融合的关键术语
 def get_topK_kp(all_merged_kp, k):
@@ -288,6 +281,48 @@ def evaluate(topK_merged_kp, original_kp):
     return precision_avg, recall_avg, f, precision,recall
 
 
+def stemming(kp_list):
+    stemmer = nltk.stem.PorterStemmer()
+    all_stem_result = []
+    for i in range(len(kp_list)):
+        one_stem_result = []
+        for j in range(len(kp_list[i])):
+            one_kp_split = kp_list[i][j].split(' ')
+            one_stem_kp = stemmer.stem(one_kp_split[0])
+            for k in range(1, len(one_kp_split)):
+                one_stem_kp = one_stem_kp +  ' ' +stemmer.stem(one_kp_split[k])
+            one_stem_result.append(one_stem_kp)
+        all_stem_result.append(one_stem_result)
+    return all_stem_result
+
+
+def evaluate_stem(topK_merged_kp, original_kp):
+    topK_merged_kp = stemming(topK_merged_kp)
+    original_kp = stemming(original_kp)
+    precision = []
+    recall = []
+    # k可能小于标准关键术语个数
+    doc_num = len(topK_merged_kp)
+    for i in range(doc_num):
+        #  计算每一篇文档的p和r
+        correct_num = 0
+        for j in range(len(topK_merged_kp[i])):
+            if original_kp.__contains__(topK_merged_kp[i][j]):
+                correct_num += 1
+        pi = correct_num / len(topK_merged_kp[i])
+        ri = correct_num / len(original_kp[i])
+        precision.append(pi)
+        recall.append(ri)
+    # 计算全部文档的平均p和r
+    precision = np.array(precision)
+    recall = np.array(recall)
+    precision_avg = np.average(precision)
+    recall_avg = np.average(recall)
+    f = (2 * precision_avg * recall_avg) / (precision_avg + recall_avg)
+
+    return precision_avg, recall_avg, f, precision,recall
+
+
 def save_results(result_array, save_path):
     # fp = open(file=save_dir, mode='w', encoding='utf-8')
     fp = codecs.open(filename=save_path, mode='w', encoding='utf-8')
@@ -296,6 +331,14 @@ def save_results(result_array, save_path):
         fp.write(str(i) + ":" + line + '\n')
     fp.close()
 
+
+# 对融合的全部结果排序后写入文件
+def save_all_merged_results(result_list, save_dir):
+    fp = codecs.open(filename=save_dir, mode='w', encoding='utf-8')
+    for i in range(len(result_list)):
+        line = str(sorted(result_list[i].items(), key=lambda d: d[1], reverse=True))
+        fp.write(line + '\n')
+    fp.close()
 
 if __name__ == '__main__':
     vector_dir = 'sg.word2vec.300d'
@@ -356,7 +399,7 @@ if __name__ == '__main__':
             # evaluate:
             precision_dir = os.path.join(p_k_evaluate_dir, 'precision_'+str(k)+'.txt')
             recall_dir = os.path.join(p_k_evaluate_dir, 'recall_'+str(k)+'.txt')
-            precision_avg, recall_avg, f, precision, recall = evaluate(topK_merged_kp, all_original_kp)
+            precision_avg, recall_avg, f, precision, recall = evaluate_stem(topK_merged_kp, all_original_kp)
             save_results(precision, precision_dir)
             save_results(recall, recall_dir)
             print('平均检准率： ', precision_avg)
