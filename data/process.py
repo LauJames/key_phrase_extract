@@ -1,6 +1,6 @@
 #! /user/bin/evn python
 # -*- coding:utf8 -*-
-
+import os
 import re
 import codecs
 import numpy as np
@@ -167,8 +167,8 @@ def calculate_doc_sim(doc_vectors):
 
 
 # 抽取所有文档的top n篇相似文档
-def get_topN_sim(all_doc_sim, topN):
-    return all_doc_sim[:,:,0:topN]  # doc_num * topN
+# def get_topN_sim(all_doc_sim, topN):
+#     return all_doc_sim[:,:,0:topN]  # doc_num * topN
 
 
 # 对于一篇文档： 融合其topN篇相似的外部文档的全部key phrase
@@ -233,7 +233,7 @@ def merge(original_dict, external_dict, p):
 def extract_all(all_doc_sim, all_original_kp, topN,  all_kp_extracs, p):
     all_merged_kp = []
     for i in range(len(all_doc_sim)):
-        shape = np.array(all_doc_sim).shape
+        # 取topN篇相似文档
         topN_doc_sims = all_doc_sim[i][:topN+1] # 相似文档里包含里目标文档本身
         external_dict = get_external(topN_doc_sims,all_original_kp, currunt_docID=i)
         original_dict = all_kp_extracs[i]
@@ -242,25 +242,39 @@ def extract_all(all_doc_sim, all_original_kp, topN,  all_kp_extracs, p):
     return all_merged_kp
 
 
-def save_merged_results(result_list, save_dir):
-    fp = codecs.open(filename=save_dir, mode='w', encoding='utf-8',)
+# 对融合的全部结果排序后写入文件
+def save_all_merged_results(result_list, save_dir):
+    fp = codecs.open(filename=save_dir, mode='w', encoding='utf-8')
     for i in range(len(result_list)):
         line = str(sorted(result_list[i].items(), key=lambda d: d[1], reverse=True))
         fp.write(line + '\n')
     fp.close()
 
 
-def evaluate(merged_kp, original_kp):
+# 获取每篇文档的topK个融合的关键术语
+def get_topK_kp(all_merged_kp, k):
+    topK_merged_kp = []
+    for i in range(len(all_merged_kp)):
+        sorted_list = sorted(all_merged_kp[i].items(), key=lambda d: d[1], reverse=True)
+        one_doc_kp_list = []
+        for j in range(k):
+            one_doc_kp_list.append(sorted_list[j][0])
+        topK_merged_kp.append(one_doc_kp_list)
+    return topK_merged_kp
+
+
+def evaluate(topK_merged_kp, original_kp):
     precision = []
     recall = []
-    doc_num = len(original_kp)
+    # k可能小于标准关键术语个数
+    doc_num = len(topK_merged_kp)
     for i in range(doc_num):
         #  计算每一篇文档的p和r
         correct_num = 0
-        for j in range(len(merged_kp)):
-            if original_kp.__contains__(merged_kp[i][j]):
+        for j in range(len(topK_merged_kp[i])):
+            if original_kp.__contains__(topK_merged_kp[i][j]):
                 correct_num += 1
-        pi = correct_num / len(merged_kp[i])
+        pi = correct_num / len(topK_merged_kp[i])
         ri = correct_num / len(original_kp[i])
         precision.append(pi)
         recall.append(ri)
@@ -274,21 +288,29 @@ def evaluate(merged_kp, original_kp):
     return precision_avg, recall_avg, f, precision,recall
 
 
-def save_evaluate_results(result_array, save_dir):
-    fp = codecs.open(filename=save_dir, mode='w', encoding='utf-8',)
+def save_results(result_array, save_path):
+    # fp = open(file=save_dir, mode='w', encoding='utf-8')
+    fp = codecs.open(filename=save_path, mode='w', encoding='utf-8')
     for i in range(len(result_array)):
         line = str(result_array[i])
         fp.write(str(i) + ":" + line + '\n')
     fp.close()
 
+
 if __name__ == '__main__':
     vector_dir = 'sg.word2vec.300d'
     file_path = 'doc_test.txt'
     vocab_dir ='vocab_sg300d.txt'
-    merged_results_dir = 'merged_results.txt'
+    merged_results_dir = 'all_merged_results.txt'
+    # evaluate dir：
+    evaluate_dir = '../evaluate/'
+    topK_merged_dir = 'topK_merged_results.txt'
     precision_dir = 'precision.txt'
     recall_dir = 'recall.txt'
 
+    topN = 10  #10篇相似文档
+    p_list = [0.2, 0.5, 0.6, 0.8]  #
+    k_list = [2,4,6]
     # prepare for data
     vocab = load_vocab(vocab_dir)
     docs, all_original_kp, all_kp_extracs = load_all_data(file_path, vocab)
@@ -302,20 +324,41 @@ if __name__ == '__main__':
     #     print('\n')
 
     # merge:
-    all_merged_kp = extract_all(all_doc_sim, all_original_kp, 2, all_kp_extracs,0.6)
-    print('内外部融合结果：')
-    for i in range(len(all_merged_kp)):
-        print(sorted(all_merged_kp[i].items(), key=lambda d: d[1], reverse=True))
-    save_merged_results(all_merged_kp, merged_results_dir)
+    for p in p_list:
+        print('概率p为 ' + str(p) + ' 的结果：')
+        if not os.path.exists(evaluate_dir):
+            os.makedirs(evaluate_dir)
+        p_evaluate_dir = os.path.join(evaluate_dir, 'P' + str(p) + '/')
+        if not os.path.exists(p_evaluate_dir):
+            os.makedirs(p_evaluate_dir)
 
-    # evaluate:
-    precision_avg, recall_avg, f, precision, recall = evaluate(all_merged_kp, all_original_kp)
-    save_evaluate_results(precision, precision_dir)
-    save_evaluate_results(recall, recall_dir)
-    print('平均检准率： ' + precision_avg)
-    print('平均检全率： ' + recall_avg)
-    print('F值： ' + f)
+        # p_evaluate_dir = evaluate_dir+'P'+str(p)+'/'
+        all_merged_dir = os.path.join(p_evaluate_dir, 'all_merged.txt')
+        all_merged_kp = extract_all(all_doc_sim, all_original_kp, topN, all_kp_extracs, p)
+        print('内外部融合结果：')
+        for i in range(len(all_merged_kp)):
+            print(sorted(all_merged_kp[i].items(), key=lambda d: d[1], reverse=True))
+        save_all_merged_results(all_merged_kp, all_merged_dir)
 
+        for k in k_list:
+            print('取前 '+str(k)+' 个关键术语的结果：')
+            # p_k_evaluate_dir = p_evaluate_dir + 'merged_top' + str(k) + '_phrases.txt'
+            p_k_evaluate_dir = os.path.join(p_evaluate_dir, 'top'+str(k)+'_phrases.txt')
+            if not os.path.exists(p_k_evaluate_dir):
+                os.makedirs(p_k_evaluate_dir)
+            topK_merged_kp = get_topK_kp(all_merged_kp, k)
+            save_results(topK_merged_kp, p_k_evaluate_dir)
+
+            # evaluate:
+            precision_dir = os.path.join(p_evaluate_dir, 'precision_'+str(k)+'.txt')
+            recall_dir = os.path.join(p_evaluate_dir, 'recall_'+str(k)+'.txt')
+            precision_avg, recall_avg, f, precision, recall = evaluate(topK_merged_kp, all_original_kp)
+            save_results(precision, precision_dir)
+            save_results(recall, recall_dir)
+            print('平均检准率： ', precision_avg)
+            print('平均检全率： ', recall_avg)
+            print('F值： ', f)
+        print('\n')
 
 
 
