@@ -17,12 +17,31 @@ import sys
 import json
 from rake_nltk import Rake
 
-rake = Rake()
 
 curdir = os.path.dirname(os.path.abspath(__file__)).replace('\\', '/')
 sys.path.insert(0, curdir)
 
 json_path = curdir + '/all_title_abstract_keyword_clean.json'
+rake_process_path = curdir + '/rake_extract_keyphrase.json'
+rake_process_txt_path = curdir + '/rake_extract_keyphrase.txt'
+stop_words_path = curdir + '/stopwords.txt'
+
+
+def load_stop_words(stop_word_file):
+    """
+    Utility function to load stop words from a file and return as a list of words
+    @param stop_word_file Path and file name of a file containing stop words.
+    @return list A list of stop words.
+    """
+    stop_words = []
+    for line in open(stop_word_file):
+        if line.strip()[0:1] != "#":
+            for word in line.split():  # in case more than one per line
+                stop_words.append(word)
+    return stop_words
+
+
+rake = Rake(max_length=4, stopwords=load_stop_words(stop_words_path))
 
 
 def rake_test():
@@ -41,8 +60,57 @@ def rake_test():
 
 def load_json(path):
     with open(path, 'r', encoding='utf8') as fin:
-        json_line = fin.readlines()
+        json_line = fin.readline()  # just one line
         json_obj = json.loads(json_line)
     return json_obj
 
 
+def extract_keyphrase(json_obj, save_path):
+    with open(save_path, 'w+', encoding='utf8') as fout:
+        json_list = []
+        for temp in json_obj:
+            title = temp["title"]
+            abstract = temp["abstract"]
+            key_words = temp["keyword"]
+            extract_text = title + '. ' + abstract
+            rake.extract_keywords_from_text(extract_text)
+            rake_string = []
+            count = 0
+            for tup in rake.get_ranked_phrases_with_scores():
+                if count >= 10:
+                    break
+                rake_string.append(str(tup[0]) + '|||' + tup[1])
+                count += 1
+            extracted_info = ';'.join(rake_string)
+            # extracted_info = ';'.join([str(tup[0]) + '|||' + tup[1] for tup in rake.get_ranked_phrases_with_scores()])
+            json_str = {"extract_text": extract_text, "keywords": key_words,"rake_extract": extracted_info}
+            json_list.append(json_str)
+        json.dump(json_list, fout, ensure_ascii=False)
+
+
+def extract_keyphrase2txt(json_obj, save_path):
+    with open(save_path, 'w+', encoding='utf8') as fout:
+        for temp in json_obj:
+            title = temp["title"]
+            abstract = temp["abstract"]
+            key_words = temp["keyword"]
+            extract_text = title + '. ' + abstract
+            rake.extract_keywords_from_text(extract_text)
+            rake_string = []
+            count = 0
+            for tup in rake.get_ranked_phrases_with_scores():
+                if count >= 10:
+                    break
+                rake_string.append(str(tup[0]) + '|||' + tup[1])
+                count += 1
+            extracted_info = ';'.join(rake_string)
+            # extracted_info = ';'.join([str(tup[0]) + '|||' + tup[1] for tup in rake.get_ranked_phrases_with_scores()])
+            txt_str = extract_text + '\t' + key_words + '\t' + extracted_info
+            fout.write(txt_str + '\n')
+
+
+if __name__ == '__main__':
+    # rake_test()
+    json_obj = load_json(json_path)
+    # extract_keyphrase(json_obj=json_obj, save_path=rake_process_path)
+    extract_keyphrase2txt(json_obj=json_obj, save_path=rake_process_txt_path)

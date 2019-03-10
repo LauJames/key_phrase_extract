@@ -59,7 +59,7 @@ def load_all_data(file_path, vocab):
             print(line_num)
             line = fp.readline()
             if not line:
-                print('get_headerFile successful!')
+                print('数据读取完毕!')
                 # docs = [clean_str(str(doc)) for doc in docs]
                 return [docs, key_phrases, key_phrase_extracs]
 
@@ -105,20 +105,20 @@ def load_all_data(file_path, vocab):
 
 
 # 对每篇文章分词
-def get_docs(file_path):
-    docs = []
-    with codecs.open(filename=file_path, encoding='utf-8') as fp:
-        while True:
-            line = fp.readline()
-            if not line:
-                print('get docs successful!')
-                return docs
-
-            tmp = line.strip().split('\t')
-            # print(tmp[0])
-            doc = clean_str(tmp[0])
-            doc_split = doc.split(' ')
-            docs.append(doc_split)
+# def get_docs(file_path):
+#     docs = []
+#     with codecs.open(filename=file_path, encoding='utf-8') as fp:
+#         while True:
+#             line = fp.readline()
+#             if not line:
+#                 print('get docs successful!')
+#                 return docs
+#
+#             tmp = line.strip().split('\t')
+#             # print(tmp[0])
+#             doc = clean_str(tmp[0])
+#             doc_split = doc.split(' ')
+#             docs.append(doc_split)
 
 
 # 加载词向量/计算文档向量
@@ -343,15 +343,19 @@ if __name__ == '__main__':
         for k in k_list:
             print('取前 '+str(k)+' 个关键术语的结果：')
             # p_k_evaluate_dir = p_evaluate_dir + 'merged_top' + str(k) + '_phrases.txt'
-            p_k_evaluate_dir = os.path.join(p_evaluate_dir, 'top'+str(k)+'_phrases.txt')
+            # p_k_evaluate_dir = os.path.join(p_evaluate_dir, 'top'+str(k)+'_phrases.txt')
+            # 文件夹k
+            p_k_evaluate_dir = os.path.join(p_evaluate_dir, 'top'+str(k)+'/')
             if not os.path.exists(p_k_evaluate_dir):
                 os.makedirs(p_k_evaluate_dir)
+
+            p_k_merged_results_dir = os.path.join(p_k_evaluate_dir, 'top'+str(k)+'_phrases.txt')
             topK_merged_kp = get_topK_kp(all_merged_kp, k)
-            save_results(topK_merged_kp, p_k_evaluate_dir)
+            save_results(topK_merged_kp, p_k_merged_results_dir)
 
             # evaluate:
-            precision_dir = os.path.join(p_evaluate_dir, 'precision_'+str(k)+'.txt')
-            recall_dir = os.path.join(p_evaluate_dir, 'recall_'+str(k)+'.txt')
+            precision_dir = os.path.join(p_k_evaluate_dir, 'precision_'+str(k)+'.txt')
+            recall_dir = os.path.join(p_k_evaluate_dir, 'recall_'+str(k)+'.txt')
             precision_avg, recall_avg, f, precision, recall = evaluate(topK_merged_kp, all_original_kp)
             save_results(precision, precision_dir)
             save_results(recall, recall_dir)
