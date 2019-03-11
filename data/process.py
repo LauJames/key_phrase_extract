@@ -63,6 +63,7 @@ def load_vocab(vacab_dir):
 
 # txt
 def load_all_data(txt_file_path, vocab):
+    print('开始读取txt数据...')
     docs = []
     key_phrases = []
     key_phrase_extracs = []
@@ -73,7 +74,7 @@ def load_all_data(txt_file_path, vocab):
             print(line_num)
             line = fp.readline()
             if not line:
-                print('数据读取完毕!')
+                print('txt数据读取完毕!')
                 # docs = [clean_str(str(doc)) for doc in docs]
                 return [docs, key_phrases, key_phrase_extracs]
 
@@ -89,7 +90,7 @@ def load_all_data(txt_file_path, vocab):
             # print(tmp)
             key_phrases.append(tmp[1].split(';'))
 
-            extracs_tmp = tmp[2].split(';')
+            extracs_tmp = tmp[2].split('###')
             doc_phrase_weight = {}
             for i in range(len(extracs_tmp)):
                 extracs_phrase_weight = extracs_tmp[i].split('|||')
@@ -98,9 +99,6 @@ def load_all_data(txt_file_path, vocab):
                 except IndexError:
                     print('该行提取的关键术语数据有误：' + str(tmp[2]))
                     print('具体数据错误：' + str(extracs_phrase_weight))
-
-                else:
-                    doc_phrase_weight.update({extracs_phrase_weight[1]: float(extracs_phrase_weight[0])})
                 # doc_phrase_weight.update({extracs_phrase_weight[1]: float(extracs_phrase_weight[0])})
 
             # 按value升序排序
@@ -119,19 +117,10 @@ def load_all_data(txt_file_path, vocab):
 
 # json
 def load_all_data_json(json_file_path, vocab):
+    print('开始读取json数据...')
     docs = []
     key_phrases = []
     key_phrase_extracs = []
-    # line_num = 0
-    # with codecs.open(filename=json_file_path, encoding='utf-8') as fp:
-    #     while True:
-    #         line_num += 1
-    #         print(line_num)
-    #         line = fp.readline()
-    #         if not line:
-    #             print('数据读取完毕!')
-    #             # docs = [clean_str(str(doc)) for doc in docs]
-    #             return [docs, key_phrases, key_phrase_extracs]
     file = open(json_file_path, encoding='utf-8')
     json_dict = json.load(file)
     for one_doc in json_dict:
@@ -147,7 +136,7 @@ def load_all_data_json(json_file_path, vocab):
 
         key_phrases.append(keywords.split(';'))
 
-        extracs_tmp = rake_extract.split(';')
+        extracs_tmp = rake_extract.split('###')
         doc_phrase_weight = {}
         for i in range(len(extracs_tmp)):
             extracs_phrase_weight = extracs_tmp[i].split('|||')
@@ -167,7 +156,7 @@ def load_all_data_json(json_file_path, vocab):
 
     # print(tmp[2])
     # print("=====" + str(doc_phrase_weight) + '\n')
-    print('数据读取完毕!')
+    print('json数据读取完毕!')
     return [docs, key_phrases, key_phrase_extracs]
 
 
@@ -232,7 +221,7 @@ def calculate_doc_sim(doc_vectors):
     print('文档相似度计算完毕！\n')
     return all_doc_sim
 
-# 对内部抽取和外部融合后的dict的weight做归一化 weight/(max - min)
+# 对内部抽取和外部融合后的dict的weight做归一化 （weight - min） /(max - min)
 def normalization(kp_weight_dict):
     max_weight = max(kp_weight_dict.values())
     min_weight = min(kp_weight_dict.values())
@@ -313,9 +302,9 @@ def extract_all(all_doc_sim, all_original_kp, topN, all_kp_extracs, p):
         # 添加归一化操作
         external_dict = normalization(external_dict)
         original_dict = normalization(original_dict)
-        print('归一化后......')
-        print('外部结果：' + str(sorted(external_dict.items(), key=lambda d: d[1], reverse=True)))
-        print('内部结果：' + str(sorted(original_dict.items(), key=lambda d: d[1], reverse=True)))
+        # print('归一化后......')
+        # print('外部结果：' + str(sorted(external_dict.items(), key=lambda d: d[1], reverse=True)))
+        # print('内部结果：' + str(sorted(original_dict.items(), key=lambda d: d[1], reverse=True)))
 
         one_merge_dict = merge(original_dict, external_dict, p)
         all_merged_kp.append(one_merge_dict)
@@ -442,8 +431,8 @@ if __name__ == '__main__':
 
     # prepare for data
     vocab = load_vocab(vocab_dir)
-    docs, all_original_kp, all_kp_extracs = load_all_data(file_path, vocab)
-    # docs, all_original_kp, all_kp_extracs = load_all_data_json(file_path_json, vocab)
+    # docs, all_original_kp, all_kp_extracs = load_all_data(file_path, vocab)
+    docs, all_original_kp, all_kp_extracs = load_all_data_json(file_path_json, vocab)
     all_doc_vectors = doc2vec(vector_dir, docs)
     all_doc_sim = calculate_doc_sim(all_doc_vectors)
 
