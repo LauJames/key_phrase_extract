@@ -83,7 +83,7 @@ def extract_keyphrase(json_obj, save_path):
                 count += 1
             extracted_info = ';'.join(rake_string)
             # extracted_info = ';'.join([str(tup[0]) + '|||' + tup[1] for tup in rake.get_ranked_phrases_with_scores()])
-            json_str = {"extract_text": extract_text, "keywords": key_words,"rake_extract": extracted_info}
+            json_str = {"extract_text": extract_text, "keywords": key_words, "rake_extract": extracted_info}
             json_list.append(json_str)
         json.dump(json_list, fout, ensure_ascii=False)
 
@@ -112,5 +112,5 @@ def extract_keyphrase2txt(json_obj, save_path):
 if __name__ == '__main__':
     # rake_test()
     json_obj = load_json(json_path)
-    # extract_keyphrase(json_obj=json_obj, save_path=rake_process_path)
-    extract_keyphrase2txt(json_obj=json_obj, save_path=rake_process_txt_path)
+    extract_keyphrase(json_obj=json_obj, save_path=rake_process_path)
+    # extract_keyphrase2txt(json_obj=json_obj, save_path=rake_process_txt_path)
