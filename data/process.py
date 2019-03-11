@@ -232,10 +232,15 @@ def calculate_doc_sim(doc_vectors):
     print('文档相似度计算完毕！\n')
     return all_doc_sim
 
-
-# 抽取所有文档的top n篇相似文档
-# def get_topN_sim(all_doc_sim, topN):
-#     return all_doc_sim[:,:,0:topN]  # doc_num * topN
+# 对内部抽取和外部融合后的dict的weight做归一化 weight/(max - min)
+def normalization(kp_weight_dict):
+    max_weight = max(kp_weight_dict.values())
+    min_weight = min(kp_weight_dict.values())
+    scale = max_weight - min_weight
+    for key in kp_weight_dict:
+        weight = (kp_weight_dict[key] - min_weight) / scale
+        kp_weight_dict.update({key: weight})
+    return kp_weight_dict
 
 
 # 对于一篇文档： 融合其topN篇相似的外部文档的全部key phrase
@@ -302,8 +307,16 @@ def extract_all(all_doc_sim, all_original_kp, topN, all_kp_extracs, p):
     for i in range(len(all_doc_sim)):
         # 取topN篇相似文档
         topN_doc_sims = all_doc_sim[i][:topN + 1]  # 相似文档里包含里目标文档本身
+
         external_dict = get_external(topN_doc_sims, all_original_kp, currunt_docID=i)
         original_dict = all_kp_extracs[i]
+        # 添加归一化操作
+        external_dict = normalization(external_dict)
+        original_dict = normalization(original_dict)
+        print('归一化后......')
+        print('外部结果：' + str(sorted(external_dict.items(), key=lambda d: d[1], reverse=True)))
+        print('内部结果：' + str(sorted(original_dict.items(), key=lambda d: d[1], reverse=True)))
+
         one_merge_dict = merge(original_dict, external_dict, p)
         all_merged_kp.append(one_merge_dict)
     return all_merged_kp
@@ -371,8 +384,8 @@ def evaluate_stem(topK_merged_kp, original_kp, stop_words):
     # k可能小于标准关键术语个数
     doc_num = len(topK_merged_kp)
     for i in range(doc_num):
-        print('关键术语topK: ' + str(topK_merged_kp[i]))
-        print('原始关键术语：' + str(original_kp[i]))
+        # print('关键术语topK: ' + str(topK_merged_kp[i]))
+        # print('原始关键术语：' + str(original_kp[i]))
         #  计算每一篇文档的p和r
         correct_num = 0
         for j in range(len(topK_merged_kp[i])):
@@ -425,11 +438,12 @@ if __name__ == '__main__':
     topN = 10  # 10篇相似文档
     p_list = [0.2, 0.5, 0.6, 0.8]  #
     k_list = [2, 4, 6]
+    stop_words = get_stopword()
 
     # prepare for data
     vocab = load_vocab(vocab_dir)
-    # docs, all_original_kp, all_kp_extracs = load_all_data(file_path, vocab)
-    docs, all_original_kp, all_kp_extracs = load_all_data_json(file_path_json, vocab)
+    docs, all_original_kp, all_kp_extracs = load_all_data(file_path, vocab)
+    # docs, all_original_kp, all_kp_extracs = load_all_data_json(file_path_json, vocab)
     all_doc_vectors = doc2vec(vector_dir, docs)
     all_doc_sim = calculate_doc_sim(all_doc_vectors)
 
@@ -469,7 +483,6 @@ if __name__ == '__main__':
             # evaluate:
             precision_dir = os.path.join(p_k_evaluate_dir, 'precision_' + str(k) + '.txt')
             recall_dir = os.path.join(p_k_evaluate_dir, 'recall_' + str(k) + '.txt')
-            stop_words = get_stopword()
             precision_avg, recall_avg, f, precision, recall = evaluate_stem(topK_merged_kp, all_original_kp, stop_words)
             save_results(precision, precision_dir)
             save_results(recall, recall_dir)
