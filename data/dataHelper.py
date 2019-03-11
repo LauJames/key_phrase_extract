@@ -84,7 +84,7 @@ def extract_keyphrase(json_obj, save_path):
                     break
                 rake_string.append(str(tup[0]) + '|||' + tup[1])
                 count += 1
-            extracted_info = ';'.join(rake_string)
+            extracted_info = '###'.join(rake_string)
             # extracted_info = ';'.join([str(tup[0]) + '|||' + tup[1] for tup in rake.get_ranked_phrases_with_scores()])
             json_str = {"extract_text": extract_text, "keywords": key_words, "rake_extract": extracted_info}
             json_list.append(json_str)
@@ -108,7 +108,7 @@ def extract_keyphrase2txt(json_obj, save_path):
                     break
                 rake_string.append(str(tup[0]) + '|||' + tup[1])
                 count += 1
-            extracted_info = ';'.join(rake_string)
+            extracted_info = '###'.join(rake_string)
             # extracted_info = ';'.join([str(tup[0]) + '|||' + tup[1] for tup in rake.get_ranked_phrases_with_scores()])
             txt_str = extract_text + '\t' + key_words + '\t' + extracted_info
             fout.write(txt_str + '\n')

@@ -89,7 +89,7 @@ def load_all_data(txt_file_path, vocab):
             # print(tmp)
             key_phrases.append(tmp[1].split(';'))
 
-            extracs_tmp = tmp[2].split(';')
+            extracs_tmp = tmp[2].split('###')
             doc_phrase_weight = {}
             for i in range(len(extracs_tmp)):
                 extracs_phrase_weight = extracs_tmp[i].split('|||')
@@ -147,7 +147,7 @@ def load_all_data_json(json_file_path, vocab):
 
         key_phrases.append(keywords.split(';'))
 
-        extracs_tmp = rake_extract.split(';')
+        extracs_tmp = rake_extract.split('###')
         doc_phrase_weight = {}
         for i in range(len(extracs_tmp)):
             extracs_phrase_weight = extracs_tmp[i].split('|||')
