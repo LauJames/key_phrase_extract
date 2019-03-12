@@ -38,7 +38,7 @@ def clean_str(string):
 
 def get_stopword():
     stop_words = []
-    with codecs.open(filename='stopword_en.txt', encoding='utf-8') as fp:
+    with codecs.open(filename='stopwords.txt', encoding='utf-8') as fp:
         while True:
             line = fp.readline().strip()
             if not line:
@@ -96,7 +96,7 @@ def load_all_data(txt_file_path, vocab):
                 extracs_phrase_weight = extracs_tmp[i].split('|||')
                 try:
                     doc_phrase_weight.update({extracs_phrase_weight[1]: float(extracs_phrase_weight[0])})
-                except IndexError:
+                except ValueError:
                     print('该行提取的关键术语数据有误：' + str(tmp[2]))
                     print('具体数据错误：' + str(extracs_phrase_weight))
                 # doc_phrase_weight.update({extracs_phrase_weight[1]: float(extracs_phrase_weight[0])})
@@ -142,12 +142,10 @@ def load_all_data_json(json_file_path, vocab):
             extracs_phrase_weight = extracs_tmp[i].split('|||')
             try:
                 doc_phrase_weight.update({extracs_phrase_weight[1]: float(extracs_phrase_weight[0])})
-            except IndexError:
+            except (Exception) as e:
+                print('Exception:', str(e))
                 print('该行提取的关键术语数据有误：' + str(rake_extract))
                 print('具体数据错误：' + str(extracs_phrase_weight))
-
-            else:
-                doc_phrase_weight.update({extracs_phrase_weight[1]: float(extracs_phrase_weight[0])})
 
         key_phrase_extracs.append(doc_phrase_weight)
 

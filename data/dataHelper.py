@@ -15,6 +15,7 @@
 import os
 import sys
 import json
+import re
 from rake_nltk import Rake
 
 
@@ -73,6 +74,8 @@ def extract_keyphrase(json_obj, save_path):
             abstract = temp["abstract"]
             key_words = temp["keyword"]
             extract_text = title + '. ' + abstract
+            extract_text = re.sub(r'[^\u4e00-\u9fa5a-zA-Z0-9~!@#$%^&*()_+<>?:,./;’，。、‘：“《》？~！@#￥%……（）]', ' ',
+                                  extract_text)
             rake.extract_keywords_from_text(extract_text)
             rake_string = []
             count = 0
@@ -81,9 +84,9 @@ def extract_keyphrase(json_obj, save_path):
                     break
                 rake_string.append(str(tup[0]) + '|||' + tup[1])
                 count += 1
-            extracted_info = ';'.join(rake_string)
+            extracted_info = '###'.join(rake_string)
             # extracted_info = ';'.join([str(tup[0]) + '|||' + tup[1] for tup in rake.get_ranked_phrases_with_scores()])
-            json_str = {"extract_text": extract_text, "keywords": key_words,"rake_extract": extracted_info}
+            json_str = {"extract_text": extract_text, "keywords": key_words, "rake_extract": extracted_info}
             json_list.append(json_str)
         json.dump(json_list, fout, ensure_ascii=False)
 
@@ -95,6 +98,8 @@ def extract_keyphrase2txt(json_obj, save_path):
             abstract = temp["abstract"]
             key_words = temp["keyword"]
             extract_text = title + '. ' + abstract
+            extract_text = re.sub(r'[^\u4e00-\u9fa5a-zA-Z0-9~!@#$%^&*()_+<>?:,./;’，。、‘：“《》？~！@#￥%……（）]', ' ',
+                                  extract_text)
             rake.extract_keywords_from_text(extract_text)
             rake_string = []
             count = 0
@@ -103,7 +108,7 @@ def extract_keyphrase2txt(json_obj, save_path):
                     break
                 rake_string.append(str(tup[0]) + '|||' + tup[1])
                 count += 1
-            extracted_info = ';'.join(rake_string)
+            extracted_info = '###'.join(rake_string)
             # extracted_info = ';'.join([str(tup[0]) + '|||' + tup[1] for tup in rake.get_ranked_phrases_with_scores()])
             txt_str = extract_text + '\t' + key_words + '\t' + extracted_info
             fout.write(txt_str + '\n')
@@ -112,5 +117,8 @@ def extract_keyphrase2txt(json_obj, save_path):
 if __name__ == '__main__':
     # rake_test()
     json_obj = load_json(json_path)
-    # extract_keyphrase(json_obj=json_obj, save_path=rake_process_path)
-    extract_keyphrase2txt(json_obj=json_obj, save_path=rake_process_txt_path)
+    extract_keyphrase(json_obj=json_obj, save_path=rake_process_path)
+    # extract_keyphrase2txt(json_obj=json_obj, save_path=rake_process_txt_path)
+    # str_test = "Stable haptic rendering with detailed energy-compensating control ?. Sampled-data system nature is the main factor for a haptic system to exhibit non-passive behaviors or instabilities through energy leaks, especially for stiff objects rendering. A detailed energy-compensating method is presented aiming to improve the haptic system's performance based on the concept of doing work. Using an ideal continuous-time haptic system as a reference, we calculate the work difference between interactions in the sampled-data haptic system and the counterparts in the real world. An energy-compensating controller (ECC) is then designed to compensate for, in every sampling period, the energy leaks caused by work difference. The work difference exists both in entering and leaving periods of interaction contacts, which means the ECC not only removes the unwanted extra work from the virtual environment to eliminate potential non-passive system behaviors, but also compensates for the deficient work that should be done by the human operator to guarantee the intended rendering stiffness. The proposed method was tested and demonstrated on six human subjects with the implementation of a stiff-wall prototype haptic system via a Delta haptic device.	energy-compensating controller;work difference;perceived stiffness;haptic system;passivity theory "
+    # str_test = re.sub(r'[^\u4e00-\u9fa5a-zA-Z0-9~!@#$%^&*()_+<>?:,./;’，。、‘：“《》？~！@#￥%……（）]', ' ', str_test)
+    # print(str_test)
