@@ -38,7 +38,7 @@ def clean_str(string):
 
 def get_stopword():
     stop_words = []
-    with codecs.open(filename='stopword_en.txt', encoding='utf-8') as fp:
+    with codecs.open(filename='stopwords.txt', encoding='utf-8') as fp:
         while True:
             line = fp.readline().strip()
             if not line:
@@ -68,8 +68,10 @@ def load_all_data(txt_file_path, vocab):
     key_phrases = []
     key_phrase_extracs = []
     line_num = 0
+
     with codecs.open(filename=txt_file_path, encoding='utf-8') as fp:
         while True:
+            is_error = False
             line_num += 1
             print(line_num)
             line = fp.readline()
@@ -79,16 +81,6 @@ def load_all_data(txt_file_path, vocab):
                 return [docs, key_phrases, key_phrase_extracs]
 
             tmp = line.strip().split('\t')
-            doc_split = clean_str(tmp[0]).split(' ')
-            for i in range(len(doc_split)):
-                if not vocab.__contains__(doc_split[i]):
-                    doc_split[i] = 'unknown'
-            # print(doc_split)
-            # print('\n')
-            docs.append(doc_split)
-
-            # print(tmp)
-            key_phrases.append(tmp[1].split(';'))
 
             extracs_tmp = tmp[2].split(';')
             doc_phrase_weight = {}
@@ -96,17 +88,30 @@ def load_all_data(txt_file_path, vocab):
                 extracs_phrase_weight = extracs_tmp[i].split('|||')
                 try:
                     doc_phrase_weight.update({extracs_phrase_weight[1]: float(extracs_phrase_weight[0])})
-                except ValueError:
+                except (Exception) as e:
+                    print('Exception：' + str(e))
                     print('该行提取的关键术语数据有误：' + str(tmp[2]))
                     print('具体数据错误：' + str(extracs_phrase_weight))
-                # doc_phrase_weight.update({extracs_phrase_weight[1]: float(extracs_phrase_weight[0])})
+                    i = len(extracs_tmp) + 1
+                    is_error = True
+                    continue
+
+            if not is_error:
+                key_phrase_extracs.append(doc_phrase_weight)
+                doc_split = clean_str(tmp[0]).split(' ')
+                for m in range(len(doc_split)):
+                    if not vocab.__contains__(doc_split[m]):
+                        doc_split[m] = 'unknown'
+                docs.append(doc_split)
+
+                key_phrases.append(tmp[1].split(';'))
 
             # 按value升序排序
             # doc_phrase_weight = sorted(doc_phrase_weight.items(), key=operator.itemgetter(1))
 
             # 按value值降序排序 =================转成了list
             # doc_phrase_weight = sorted(doc_phrase_weight.items(), key=lambda d: d[1], reverse=True)
-            key_phrase_extracs.append(doc_phrase_weight)
+
 
             # print(key_phrase_extracs[:,:,0:3] )
             # print(doc_phrase_weight[0:3] +  '   '+ str(doc_phrase_weight[0][1]))
@@ -121,38 +126,43 @@ def load_all_data_json(json_file_path, vocab):
     docs = []
     key_phrases = []
     key_phrase_extracs = []
+
     file = open(json_file_path, encoding='utf-8')
     json_dict = json.load(file)
     for one_doc in json_dict:
+        is_error = False
         keywords = one_doc['keywords']
         doc_text = one_doc['extract_text']
         rake_extract = one_doc['rake_extract']
 
-        doc_split = clean_str(doc_text).split(' ')
-        for i in range(len(doc_split)):
-            if not vocab.__contains__(doc_split[i]):
-                doc_split[i] = 'unknown'
-        docs.append(doc_split)
-
-        key_phrases.append(keywords.split(';'))
-
         extracs_tmp = rake_extract.split('###')
         doc_phrase_weight = {}
+        # ============================================
+        # 添加判断 如果出现异常 舍弃整条数据
         for i in range(len(extracs_tmp)):
             extracs_phrase_weight = extracs_tmp[i].split('|||')
             try:
                 doc_phrase_weight.update({extracs_phrase_weight[1]: float(extracs_phrase_weight[0])})
-            except ValueError:
+            except (Exception) as e:
+                print('Exception:', str(e))
                 print('该行提取的关键术语数据有误：' + str(rake_extract))
                 print('具体数据错误：' + str(extracs_phrase_weight))
+                i = len(extracs_tmp) + 1
+                is_error = True
+                continue
 
-        key_phrase_extracs.append(doc_phrase_weight)
+        if not is_error:
+            # 添加抽取的关键词
+            key_phrase_extracs.append(doc_phrase_weight)
+            # 添加摘要文本
+            doc_split = clean_str(doc_text).split(' ')
+            for m in range(len(doc_split)):
+                if not vocab.__contains__(doc_split[m]):
+                    doc_split[m] = 'unknown'
+            docs.append(doc_split)
+            # 添加原始关键术语
+            key_phrases.append(keywords.split(';'))
 
-    # print(key_phrase_extracs[:,:,0:3] )
-    # print(doc_phrase_weight[0:3] +  '   '+ str(doc_phrase_weight[0][1]))
-
-    # print(tmp[2])
-    # print("=====" + str(doc_phrase_weight) + '\n')
     print('json数据读取完毕!')
     return [docs, key_phrases, key_phrase_extracs]
 
