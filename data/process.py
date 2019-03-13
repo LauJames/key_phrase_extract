@@ -68,8 +68,10 @@ def load_all_data(txt_file_path, vocab):
     key_phrases = []
     key_phrase_extracs = []
     line_num = 0
+
     with codecs.open(filename=txt_file_path, encoding='utf-8') as fp:
         while True:
+            is_error = False
             line_num += 1
             print(line_num)
             line = fp.readline()
@@ -79,34 +81,37 @@ def load_all_data(txt_file_path, vocab):
                 return [docs, key_phrases, key_phrase_extracs]
 
             tmp = line.strip().split('\t')
-            doc_split = clean_str(tmp[0]).split(' ')
-            for i in range(len(doc_split)):
-                if not vocab.__contains__(doc_split[i]):
-                    doc_split[i] = 'unknown'
-            # print(doc_split)
-            # print('\n')
-            docs.append(doc_split)
 
-            # print(tmp)
-            key_phrases.append(tmp[1].split(';'))
-
-            extracs_tmp = tmp[2].split('###')
+            extracs_tmp = tmp[2].split(';')
             doc_phrase_weight = {}
             for i in range(len(extracs_tmp)):
                 extracs_phrase_weight = extracs_tmp[i].split('|||')
                 try:
                     doc_phrase_weight.update({extracs_phrase_weight[1]: float(extracs_phrase_weight[0])})
-                except ValueError:
+                except (Exception) as e:
+                    print('Exception：' + str(e))
                     print('该行提取的关键术语数据有误：' + str(tmp[2]))
                     print('具体数据错误：' + str(extracs_phrase_weight))
-                # doc_phrase_weight.update({extracs_phrase_weight[1]: float(extracs_phrase_weight[0])})
+                    i = len(extracs_tmp) + 1
+                    is_error = True
+                    continue
+
+            if not is_error:
+                key_phrase_extracs.append(doc_phrase_weight)
+                doc_split = clean_str(tmp[0]).split(' ')
+                for m in range(len(doc_split)):
+                    if not vocab.__contains__(doc_split[m]):
+                        doc_split[m] = 'unknown'
+                docs.append(doc_split)
+
+                key_phrases.append(tmp[1].split(';'))
 
             # 按value升序排序
             # doc_phrase_weight = sorted(doc_phrase_weight.items(), key=operator.itemgetter(1))
 
             # 按value值降序排序 =================转成了list
             # doc_phrase_weight = sorted(doc_phrase_weight.items(), key=lambda d: d[1], reverse=True)
-            key_phrase_extracs.append(doc_phrase_weight)
+
 
             # print(key_phrase_extracs[:,:,0:3] )
             # print(doc_phrase_weight[0:3] +  '   '+ str(doc_phrase_weight[0][1]))
@@ -121,23 +126,19 @@ def load_all_data_json(json_file_path, vocab):
     docs = []
     key_phrases = []
     key_phrase_extracs = []
+
     file = open(json_file_path, encoding='utf-8')
     json_dict = json.load(file)
     for one_doc in json_dict:
+        is_error = False
         keywords = one_doc['keywords']
         doc_text = one_doc['extract_text']
         rake_extract = one_doc['rake_extract']
 
-        doc_split = clean_str(doc_text).split(' ')
-        for i in range(len(doc_split)):
-            if not vocab.__contains__(doc_split[i]):
-                doc_split[i] = 'unknown'
-        docs.append(doc_split)
-
-        key_phrases.append(keywords.split(';'))
-
         extracs_tmp = rake_extract.split('###')
         doc_phrase_weight = {}
+        # ============================================
+        # 添加判断 如果出现异常 舍弃整条数据
         for i in range(len(extracs_tmp)):
             extracs_phrase_weight = extracs_tmp[i].split('|||')
             try:
@@ -146,14 +147,22 @@ def load_all_data_json(json_file_path, vocab):
                 print('Exception:', str(e))
                 print('该行提取的关键术语数据有误：' + str(rake_extract))
                 print('具体数据错误：' + str(extracs_phrase_weight))
+                i = len(extracs_tmp) + 1
+                is_error = True
+                continue
 
-        key_phrase_extracs.append(doc_phrase_weight)
+        if not is_error:
+            # 添加抽取的关键词
+            key_phrase_extracs.append(doc_phrase_weight)
+            # 添加摘要文本
+            doc_split = clean_str(doc_text).split(' ')
+            for m in range(len(doc_split)):
+                if not vocab.__contains__(doc_split[m]):
+                    doc_split[m] = 'unknown'
+            docs.append(doc_split)
+            # 添加原始关键术语
+            key_phrases.append(keywords.split(';'))
 
-    # print(key_phrase_extracs[:,:,0:3] )
-    # print(doc_phrase_weight[0:3] +  '   '+ str(doc_phrase_weight[0][1]))
-
-    # print(tmp[2])
-    # print("=====" + str(doc_phrase_weight) + '\n')
     print('json数据读取完毕!')
     return [docs, key_phrases, key_phrase_extracs]
 
@@ -429,51 +438,51 @@ if __name__ == '__main__':
 
     # prepare for data
     vocab = load_vocab(vocab_dir)
-    # docs, all_original_kp, all_kp_extracs = load_all_data(file_path, vocab)
-    docs, all_original_kp, all_kp_extracs = load_all_data_json(file_path_json, vocab)
+    docs, all_original_kp, all_kp_extracs = load_all_data(file_path, vocab)
+    # docs, all_original_kp, all_kp_extracs = load_all_data_json(file_path_json, vocab)
     all_doc_vectors = doc2vec(vector_dir, docs)
     all_doc_sim = calculate_doc_sim(all_doc_vectors)
 
-    # doc_sim = calculate_doc_sim(all_doc_vectors)
-    # for i in range(len(doc_sim)):
-    #     print('doc'+ str(i))
-    #     print(str(doc_sim[i]))
-    #     print('\n')
+    doc_sim = calculate_doc_sim(all_doc_vectors)
+    for i in range(len(doc_sim)):
+        print('doc'+ str(i))
+        print(str(doc_sim[i][:11]))
+        print('\n')
 
     # merge:
-    for p in p_list:
-        print('概率p为 ' + str(p) + ' 的结果：')
-        if not os.path.exists(evaluate_dir):
-            os.makedirs(evaluate_dir)
-        p_evaluate_dir = os.path.join(evaluate_dir, 'P' + str(p) + '/')
-        if not os.path.exists(p_evaluate_dir):
-            os.makedirs(p_evaluate_dir)
-
-        all_merged_dir = os.path.join(p_evaluate_dir, 'all_merged.txt')
-        all_merged_kp = extract_all(all_doc_sim, all_original_kp, topN, all_kp_extracs, p)
-        # print('内外部融合结果：')
-        # for i in range(len(all_merged_kp)):
-        #     print(sorted(all_merged_kp[i].items(), key=lambda d: d[1], reverse=True))
-        save_all_merged_results(all_merged_kp, all_merged_dir)
-
-        for k in k_list:
-            print('取前 ' + str(k) + ' 个关键术语的结果：')
-            # 文件夹k
-            p_k_evaluate_dir = os.path.join(p_evaluate_dir, 'top' + str(k) + '/')
-            if not os.path.exists(p_k_evaluate_dir):
-                os.makedirs(p_k_evaluate_dir)
-
-            p_k_merged_results_dir = os.path.join(p_k_evaluate_dir, 'top' + str(k) + '_phrases.txt')
-            topK_merged_kp = get_topK_kp(all_merged_kp, k)
-            save_results(topK_merged_kp, p_k_merged_results_dir)
-
-            # evaluate:
-            precision_dir = os.path.join(p_k_evaluate_dir, 'precision_' + str(k) + '.txt')
-            recall_dir = os.path.join(p_k_evaluate_dir, 'recall_' + str(k) + '.txt')
-            precision_avg, recall_avg, f, precision, recall = evaluate_stem(topK_merged_kp, all_original_kp, stop_words)
-            save_results(precision, precision_dir)
-            save_results(recall, recall_dir)
-            print('平均检准率： ', precision_avg)
-            print('平均检全率： ', recall_avg)
-            print('F值： ', f)
-        print('\n')
+    # for p in p_list:
+    #     print('概率p为 ' + str(p) + ' 的结果：')
+    #     if not os.path.exists(evaluate_dir):
+    #         os.makedirs(evaluate_dir)
+    #     p_evaluate_dir = os.path.join(evaluate_dir, 'P' + str(p) + '/')
+    #     if not os.path.exists(p_evaluate_dir):
+    #         os.makedirs(p_evaluate_dir)
+    #
+    #     all_merged_dir = os.path.join(p_evaluate_dir, 'all_merged.txt')
+    #     all_merged_kp = extract_all(all_doc_sim, all_original_kp, topN, all_kp_extracs, p)
+    #     # print('内外部融合结果：')
+    #     # for i in range(len(all_merged_kp)):
+    #     #     print(sorted(all_merged_kp[i].items(), key=lambda d: d[1], reverse=True))
+    #     save_all_merged_results(all_merged_kp, all_merged_dir)
+    #
+    #     for k in k_list:
+    #         print('取前 ' + str(k) + ' 个关键术语的结果：')
+    #         # 文件夹k
+    #         p_k_evaluate_dir = os.path.join(p_evaluate_dir, 'top' + str(k) + '/')
+    #         if not os.path.exists(p_k_evaluate_dir):
+    #             os.makedirs(p_k_evaluate_dir)
+    #
+    #         p_k_merged_results_dir = os.path.join(p_k_evaluate_dir, 'top' + str(k) + '_phrases.txt')
+    #         topK_merged_kp = get_topK_kp(all_merged_kp, k)
+    #         save_results(topK_merged_kp, p_k_merged_results_dir)
+    #
+    #         # evaluate:
+    #         precision_dir = os.path.join(p_k_evaluate_dir, 'precision_' + str(k) + '.txt')
+    #         recall_dir = os.path.join(p_k_evaluate_dir, 'recall_' + str(k) + '.txt')
+    #         precision_avg, recall_avg, f, precision, recall = evaluate_stem(topK_merged_kp, all_original_kp, stop_words)
+    #         save_results(precision, precision_dir)
+    #         save_results(recall, recall_dir)
+    #         print('平均检准率： ', precision_avg)
+    #         print('平均检全率： ', recall_avg)
+    #         print('F值： ', f)
+    #     print('\n')
