@@ -68,8 +68,9 @@ def main():
                'geometry video is effective for modeling the high resolution 3D expression data.'
     result = search.search_by_abstract(abstract, 5, config)
     for data in result:
-        print(data[0], data[1], data[2])
-        # print(data[:2])
+    #     print(data[0], data[1], data[2])
+    #     print(data[:2])
+        print(data)
     # print(result)
 
 
