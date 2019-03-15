@@ -180,7 +180,7 @@ def get_es_results(abstracts, top_n):
 
     return es_results
 
-# 对每篇文章分词
+# 获取文章的abstract
 def get_docs(file_path):
     docs = []
     with codecs.open(filename=file_path, encoding='utf-8') as fp:

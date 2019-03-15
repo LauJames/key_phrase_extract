@@ -257,6 +257,7 @@ def load_json_data_for_es(json_file_path):
     print('json数据读取完毕!')
     return [abstracts_str, key_phrases]
 
+
 # 获取文章的abstract
 def get_abstracts_str(file_path):
     docs = []
@@ -274,9 +275,6 @@ def get_abstracts_str(file_path):
             #     if not vocab.__contains__(doc_split[m]):
             #         doc_split[m] = 'unknown'
             # docs.append(doc_split)
-
-
-
 
 # 加载词向量/计算文档向量
 def doc2vec(vector_model, docs):
