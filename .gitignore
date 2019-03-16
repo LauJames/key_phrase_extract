@@ -107,3 +107,4 @@ venv.bak/
 
 /data/all_title_abstract_keyword_clean.json
 /.idea/
+/test/
