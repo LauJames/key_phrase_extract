@@ -115,3 +115,4 @@ venv.bak/
 /data/vocab_sg300d.txt
 /evaluate/
 /evaluate.tar.gz
+/test/
