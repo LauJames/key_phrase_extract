@@ -4,9 +4,11 @@
 import codecs
 import numpy as np
 import nltk
+import time,datetime
 
 # 获取每篇文档的topK个融合的关键术语
 def get_topK_kp(all_merged_kp, k):
+    start_time = time.time()
     topK_merged_kp = []
     for i in range(len(all_merged_kp)):
         sorted_list = sorted(all_merged_kp[i].items(), key=lambda d: d[1], reverse=True)
@@ -14,6 +16,10 @@ def get_topK_kp(all_merged_kp, k):
         for j in range(k):
             one_doc_kp_list.append(sorted_list[j][0])
         topK_merged_kp.append(one_doc_kp_list)
+
+    end_time = time.time()
+    time_used = datetime.timedelta(seconds=int(round(end_time - start_time)))
+    print('get_topK_kp()耗时： ', str(time_used))
     return topK_merged_kp
 
 
@@ -60,6 +66,7 @@ def stemming(kp_list, stop_words):
 
 
 def evaluate_stem(topK_merged_kp, original_kp, stop_words):
+    start_time = time.time()
     topK_merged_kp = stemming(topK_merged_kp, stop_words)
     original_kp = stemming(original_kp, stop_words)
     precision = []
@@ -84,6 +91,10 @@ def evaluate_stem(topK_merged_kp, original_kp, stop_words):
     precision_avg = np.average(precision)
     recall_avg = np.average(recall)
     f = (2 * precision_avg * recall_avg) / (precision_avg + recall_avg)
+
+    end_time = time.time()
+    time_used = datetime.timedelta(seconds=int(round(end_time - start_time)))
+    print('evaluate_stem()耗时： ', str(time_used))
 
     return precision_avg, recall_avg, f, precision, recall
 

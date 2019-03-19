@@ -5,6 +5,8 @@ import re
 import codecs
 import numpy as np
 import json
+import math
+
 
 
 
@@ -163,6 +165,55 @@ def load_all_data_json(json_file_path, vocab):
     return [docs, key_phrases, key_phrase_extracs]
 
 
+# return id/abstract(未分词)/keyword/rake
+def load_all_data_json4(json_file_path):
+    print('开始读取json数据(含id)...')
+    ids = []
+    docs = []
+    key_phrases = []
+    key_phrase_extracs = []
+
+    id = 0
+    file = open(json_file_path, encoding='utf-8')
+    json_dict = json.load(file)
+    for one_doc in json_dict:
+        is_error = False
+        keywords = one_doc['keywords']
+        doc_text = one_doc['extract_text']
+        rake_extract = one_doc['rake_extract']
+
+        extracs_tmp = rake_extract.split('###')
+        doc_phrase_weight = {}
+        # ============================================
+        # 添加判断 如果出现异常 舍弃整条数据
+        for i in range(len(extracs_tmp)):
+            extracs_phrase_weight = extracs_tmp[i].split('|||')
+            try:
+                doc_phrase_weight.update({extracs_phrase_weight[1]: float(extracs_phrase_weight[0])})
+            except (Exception) as e:
+                print('Exception:', str(e))
+                print('该行提取的关键术语数据有误：' + str(rake_extract))
+                print('具体数据错误：' + str(extracs_phrase_weight))
+                i = len(extracs_tmp) + 1
+                is_error = True
+                continue
+
+        if not is_error:
+            # 添加docID
+            ids.append(id)
+            id += 1
+            # 添加抽取的关键词
+            key_phrase_extracs.append(doc_phrase_weight)
+            # 添加摘要文本
+            docs.append(doc_text)
+            # 添加原始关键术语
+            key_phrases.append(keywords.split(';'))
+
+    print('json数据读取完毕!')
+    ids = np.array(ids)
+    return [ids, docs, key_phrases, key_phrase_extracs]
+
+
 # return 未切分的abstract 和 切分的keywords
 def load_all_data_for_es(txt_file_path):
     print('开始读取txt数据...')
@@ -216,43 +267,46 @@ def load_all_data_for_es(txt_file_path):
 
 
 # return 未切分的abstract 和 切分的keywords
-def load_json_data_for_es(json_file_path):
+def load_json_data_for_es(json_file_path, data_num):
     print('开始读取json数据...')
     abstracts_str = []
     key_phrases = []
     # key_phrase_extracs = []
 
+    count = 0
     file = open(json_file_path, encoding='utf-8')
     json_dict = json.load(file)
     for one_doc in json_dict:
-        is_error = False
-        keywords = one_doc['keywords']
-        doc_text = one_doc['extract_text']
-        rake_extract = one_doc['rake_extract']
+        if count < data_num:
+            is_error = False
+            keywords = one_doc['keywords']
+            doc_text = one_doc['extract_text']
+            rake_extract = one_doc['rake_extract']
 
-        extracs_tmp = rake_extract.split('###')
-        doc_phrase_weight = {}
-        # ============================================
-        # 添加判断 如果出现异常 舍弃整条数据
-        for i in range(len(extracs_tmp)):
-            extracs_phrase_weight = extracs_tmp[i].split('|||')
-            try:
-                doc_phrase_weight.update({extracs_phrase_weight[1]: float(extracs_phrase_weight[0])})
-            except (Exception) as e:
-                print('Exception:', str(e))
-                print('该行提取的关键术语数据有误：' + str(rake_extract))
-                print('具体数据错误：' + str(extracs_phrase_weight))
-                i = len(extracs_tmp) + 1
-                is_error = True
-                continue
+            extracs_tmp = rake_extract.split('###')
+            doc_phrase_weight = {}
+                # ============================================
+                # 添加判断 如果出现异常 舍弃整条数据
+            for i in range(len(extracs_tmp)):
+                extracs_phrase_weight = extracs_tmp[i].split('|||')
+                try:
+                    doc_phrase_weight.update({extracs_phrase_weight[1]: float(extracs_phrase_weight[0])})
+                except (Exception) as e:
+                    print('Exception:', str(e))
+                    print('该行提取的关键术语数据有误：' + str(rake_extract))
+                    print('具体数据错误：' + str(extracs_phrase_weight))
+                    i = len(extracs_tmp) + 1
+                    is_error = True
+                    continue
 
-        if not is_error:
-            # 添加抽取的关键词
-            # key_phrase_extracs.append(doc_phrase_weight)
-            # 添加摘要文本
-            abstracts_str.append(doc_text)
-            # 添加原始关键术语
-            key_phrases.append(keywords.split(';'))
+            if not is_error:
+                # 添加抽取的关键词
+                # key_phrase_extracs.append(doc_phrase_weight)
+                # 添加摘要文本
+                abstracts_str.append(doc_text)
+                # 添加原始关键术语
+                key_phrases.append(keywords.split(';'))
+                count += 1
 
     print('json数据读取完毕!')
     return [abstracts_str, key_phrases]
@@ -291,18 +345,55 @@ def doc2vec(vector_model, docs):
         # 文档向量：词向量取均值
         doc_vector = vector / len(doc)
         all_doc_vectors.append(doc_vector)
-    print('文档向量计算完毕！\n')
+    # print('文档向量计算完毕！\n')
     return np.array(all_doc_vectors)
+
+# def doc2vec_model(vector_model, docs):
+#     all_doc_vectors = []
+#     # v1 = word2vec_model['virtually']
+#     # print(v1)
+#     # word2vev_model = gensim.models.keyedvectors._load_word2vec_format(datapath(vector_dir), binary=False)
+#     for i in range(len(docs)):
+#         doc = docs[i]
+#         # print(doc)
+#         vector = np.zeros(300)
+#         for j in range(len(doc)):
+#             vector = vector + np.array(vector_model[doc[j]])
+#         # 文档向量：词向量取均值
+#         doc_vector = vector / len(doc)
+#         all_doc_vectors.append({i: doc_vector})
+#     print('文档向量计算完毕！\n')
+#     return np.array(all_doc_vectors)
 
 
 # 对内部抽取和外部融合后的dict的weight做归一化 （weight - min） /(max - min)
+
+# 使用gensim训练的doc向量获取top_相似文档
+def get_sims_top_n(doc_vector_model, doc_id, top_n):
+    doc_vector = doc_vector_model[doc_id]
+    return doc_vector_model.docvecs.most_similar([doc_vector], topn=top_n)
+
+
 def normalization(kp_weight_dict):
+    # max_weight = max(kp_weight_dict.values())
+    # min_weight = min(kp_weight_dict.values())
+    # scale = max_weight - min_weight
+    # for key in kp_weight_dict:
+    #     weight = (kp_weight_dict[key] - min_weight) / scale
+    #     kp_weight_dict.update({key: weight})
+
     max_weight = max(kp_weight_dict.values())
-    min_weight = min(kp_weight_dict.values())
-    scale = max_weight - min_weight
-    for key in kp_weight_dict:
-        weight = (kp_weight_dict[key] - min_weight) / scale
-        kp_weight_dict.update({key: weight})
+    try:
+        z_exp = [math.exp(kp_weight_dict[kp]-max_weight) for kp in kp_weight_dict]
+        sum_z_exp = sum(z_exp)
+        for key in kp_weight_dict:
+            weight = math.exp(kp_weight_dict.get(key)) / sum_z_exp
+            kp_weight_dict.update({key: weight})
+    except (OverflowError) as e:
+        print(str(e) )
+        print('weight: ' + str(kp_weight_dict.get(key)))
+        print(kp_weight_dict)
+
     return kp_weight_dict
 
 
@@ -322,6 +413,13 @@ def save_all_merged_results(result_list, save_dir):
         line = str(sorted(result_list[i].items(), key=lambda d: d[1], reverse=True))
         fp.write(line + '\n')
     fp.close()
+
+
+def save_es_search_results(es_results, es_dir):
+    with codecs.open(es_dir,mode='w',encoding='utf-8') as wp:
+        for result in es_results:
+            wp.write(str(result) + '\n')
+        print('es搜索结果存储完毕！')
 
 
 if __name__ == '__main__':
