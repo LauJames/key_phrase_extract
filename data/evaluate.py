@@ -14,7 +14,15 @@ def get_topK_kp(all_merged_kp, k):
         sorted_list = sorted(all_merged_kp[i].items(), key=lambda d: d[1], reverse=True)
         one_doc_kp_list = []
         for j in range(k):
-            one_doc_kp_list.append(sorted_list[j][0])
+            if j < len(sorted_list):
+            # try:
+                one_doc_kp_list.append(sorted_list[j][0])
+            else:
+                break
+            # except (Exception) as e:
+            #     print(e)
+            #     print(str(j))
+            #     print(str(sorted_list))
         topK_merged_kp.append(one_doc_kp_list)
 
     end_time = time.time()
@@ -64,11 +72,38 @@ def stemming(kp_list, stop_words):
         all_stem_result.append(one_stem_result)
     return all_stem_result
 
+#
+# def stemming_merge_info(all_merge_info, stop_words):
+#     start_time = time.time()
+#
+#     stemmer = nltk.stem.PorterStemmer()
+#     all_merge_info_stem = []
+#     for merge_info in all_merge_info:
+#         merge_info_stem = {}
+#         for keyprase in merge_info:
+#             score = merge_info.get(keyprase)
+#             one_kp_split = keyprase.split(' ')
+#             one_stem_kp = stemmer.stem(one_kp_split[0])
+#             for k in range(1,len(one_kp_split)) :
+#                 if not stop_words.__contains__(one_kp_split[k]):
+#                     one_stem_kp = one_stem_kp + ' ' + stemmer.stem(one_kp_split[k])
+#             merge_info_stem.update({one_stem_kp: score})
+#         all_merge_info_stem.append(merge_info_stem)
+#
+#     end_time = time.time()
+#     time_used = datetime.timedelta(seconds=int(round(end_time - start_time)))
+#     print('stemming_merge_info()耗时： ', str(time_used))
+#     return all_merge_info_stem
+
 
 def evaluate_stem(topK_merged_kp, original_kp, stop_words):
     start_time = time.time()
     topK_merged_kp = stemming(topK_merged_kp, stop_words)
     original_kp = stemming(original_kp, stop_words)
+    end_time = time.time()
+    time_used = datetime.timedelta(seconds=int(round(end_time - start_time)))
+    print('stemming()耗时： ', str(time_used))
+
     precision = []
     recall = []
     # k可能小于标准关键术语个数

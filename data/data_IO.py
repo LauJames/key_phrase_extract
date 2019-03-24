@@ -330,6 +330,19 @@ def get_abstracts_str(file_path):
             #         doc_split[m] = 'unknown'
             # docs.append(doc_split)
 
+
+# 加载 all_merged_info.txt / es_search.txt
+def load_all_temp_info(info_path):
+    all_merged_info = []
+    with codecs.open(info_path, mode='r', encoding='utf-8') as fp:
+        while True:
+            line = fp.readline().strip()
+            all_merged_info.append(line)
+            if not line:
+                print('all_merge_info 读入完毕！')
+                return all_merged_info
+
+
 # 加载词向量/计算文档向量
 def doc2vec(vector_model, docs):
     all_doc_vectors = []
@@ -383,16 +396,17 @@ def normalization(kp_weight_dict):
     #     kp_weight_dict.update({key: weight})
 
     max_weight = max(kp_weight_dict.values())
-    try:
-        z_exp = [math.exp(kp_weight_dict[kp]-max_weight) for kp in kp_weight_dict]
-        sum_z_exp = sum(z_exp)
-        for key in kp_weight_dict:
-            weight = math.exp(kp_weight_dict.get(key)) / sum_z_exp
-            kp_weight_dict.update({key: weight})
-    except (OverflowError) as e:
-        print(str(e) )
-        print('weight: ' + str(kp_weight_dict.get(key)))
-        print(kp_weight_dict)
+    # try:
+    z_exp = [math.exp(kp_weight_dict[kp]-max_weight) for kp in kp_weight_dict]
+    sum_z_exp = sum(z_exp)
+    for key in kp_weight_dict:
+        w = kp_weight_dict.get(key)
+        weight = math.exp(w - max_weight) / sum_z_exp
+        kp_weight_dict.update({key: weight})
+    # except (OverflowError) as e:
+    #     print(str(e) )
+    #     print('weight: ' + str(kp_weight_dict.get(key)))
+    #     print(kp_weight_dict)
 
     return kp_weight_dict
 

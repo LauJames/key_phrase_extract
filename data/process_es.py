@@ -216,10 +216,15 @@ def get_all_merge_info(es_results, vector_model, vocab, topN):
         # es_result 包含目标文档的数据
         is_error = False
         # 获取当前文档的rake抽取结果
-        rake_extract = es_result[0][3]  # 目标文档在es 搜索结果的第一条
+        try:
+            rake_extract = es_result[0][3]  # 目标文档在es 搜索结果的第一条
+
         # 处理目标文档的rake_extract
-        rake_extract_dict = {}
-        extracs_tmp = rake_extract.split('###')
+            rake_extract_dict = {}
+            extracs_tmp = rake_extract.split('###')
+        except (Exception) as e:
+            print(e)
+            print(es_result)
         for m in range(len(extracs_tmp)):
             extracs_phrase_weight = extracs_tmp[m].split('|||')
             try:
@@ -332,9 +337,9 @@ if __name__ == '__main__':
     file_path_json = 'rake_extract_keyphrase.json'
     vocab_dir = 'vocab_sg300d.txt'
     merged_results_dir = 'all_merged_results.txt'
-    es_dir = 'process_es_search.txt'
+    # es_dir = 'process_es_search.txt'
     # evaluate dir：
-    evaluate_dir = '../evaluate_es_doc20_doc2vec/'
+    evaluate_dir = '../evaluate_es_doc10w/'
     topK_merged_dir = 'topK_merged_results.txt'
     # precision_dir = 'precision.txt'
     # recall_dir = 'recall.txt'
@@ -346,24 +351,25 @@ if __name__ == '__main__':
     # p_list = [0.2]
     # k_list = [2]
     stop_words = data_IO.get_stopword()
-    # print('加载词向量模型...')
-    # word2vec_model = gensim.models.KeyedVectors.load_word2vec_format(fname=vector_dir, binary=False)
-    # print('词向量模型加载完毕！')
-    print('加载文档向量模型...')
-    doc2vec_model = g.Doc2Vec.load(doc2vec_dir)
-    print('文档向量模型加载完毕！')
+    print('加载词向量模型...')
+    word2vec_model = gensim.models.KeyedVectors.load_word2vec_format(fname=vector_dir, binary=False)
+    print('词向量模型加载完毕！')
+    # print('加载文档向量模型...')
+    # doc2vec_model = g.Doc2Vec.load(doc2vec_dir)
+    # print('文档向量模型加载完毕！')
 
 
     # prepare for data
     vocab = data_IO.load_vocab(vocab_dir)
-    abstract_str_list, all_doc_keywords = data_IO.load_json_data_for_es(file_path_json, data_num=20)  #读取10w条数据
+    abstract_str_list, all_doc_keywords = data_IO.load_json_data_for_es(file_path_json, data_num=data_num)  #读取10w条数据
     print('abstract_str_list.len: ' + str(len(abstract_str_list)))
     # abstract_str_list = data_IO.get_abstracts_str(file_path)
-    es_results = get_es_results(abstract_str_list, top_n=50)
+    # es_results = get_es_results(abstract_str_list, top_n=50)
     # data_IO.save_es_search_results(es_results,es_dir)
-    # all_merged_info = get_all_merge_info(es_results, word2vec_model, vocab, topN)
-
-    all_merged_info = get_all_merge_info_doc2vec(es_results, doc2vec_model, topN)
+    es_results = data_IO.load_all_temp_info('es_search.txt')
+    all_merged_info = get_all_merge_info(es_results, word2vec_model, vocab, topN)
+    data_IO.save_es_search_results(all_merged_info, '../merge_info/10w_merge_info_avg.txt')
+    # all_merged_info = get_all_merge_info_doc2vec(es_results, doc2vec_model, topN)
     print(all_merged_info)
     print('计算merge需要的信息完毕！')
 
@@ -419,7 +425,7 @@ if __name__ == '__main__':
         print('\n')
         avg_evaluate.update({p: k_avg_evaluate})
 
-    avg_dir = os.path.join(evaluate_dir, 'soft_doc2vec.txt')
+    avg_dir = os.path.join(evaluate_dir, 'eval_avg_es100.txt')
     print(avg_dir)
     with open(avg_dir, mode='w', encoding='utf-8')as wp:
         for i in avg_evaluate:
