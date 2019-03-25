@@ -116,7 +116,7 @@ venv.bak/
 /evaluate.tar.gz
 /test/
 /evaluate_doc2vec_model10w/
-/evaluate_es_10w_doc2vec/
+/evaluate_es_10w_doc2vec1/
 /evaluate_es_57w_doc2vec/
 /evaluate_es_doc10/
 /evaluate_es_doc20/
@@ -128,3 +128,5 @@ venv.bak/
 /merge_info/
 /data/error_info
 /data/es_search.txt
+/evaluate_es_10w_doc2vec/
+/doc2vec/

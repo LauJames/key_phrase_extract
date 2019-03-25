@@ -24,6 +24,7 @@ sys.path.insert(0, curdir)
 
 json_path = curdir + '/all_title_abstract_keyword_clean.json'
 rake_process_path = curdir + '/rake_extract_keyphrase.json'
+rake_process_path_12 = curdir + '/rake_extract_keyphrase_12.json'
 rake_process_txt_path = curdir + '/rake_extract_keyphrase.txt'
 stop_words_path = curdir + '/stopwords.txt'
 
@@ -104,7 +105,7 @@ def extract_keyphrase2txt(json_obj, save_path):
             rake_string = []
             count = 0
             for tup in rake.get_ranked_phrases_with_scores():
-                if count >= 10:
+                if count > 12:
                     break
                 rake_string.append(str(tup[0]) + '|||' + tup[1])
                 count += 1
@@ -117,7 +118,7 @@ def extract_keyphrase2txt(json_obj, save_path):
 if __name__ == '__main__':
     # rake_test()
     json_obj = load_json(json_path)
-    extract_keyphrase(json_obj=json_obj, save_path=rake_process_path)
+    extract_keyphrase(json_obj=json_obj, save_path=rake_process_path_12)
     # extract_keyphrase2txt(json_obj=json_obj, save_path=rake_process_txt_path)
     # str_test = "Stable haptic rendering with detailed energy-compensating control ?. Sampled-data system nature is the main factor for a haptic system to exhibit non-passive behaviors or instabilities through energy leaks, especially for stiff objects rendering. A detailed energy-compensating method is presented aiming to improve the haptic system's performance based on the concept of doing work. Using an ideal continuous-time haptic system as a reference, we calculate the work difference between interactions in the sampled-data haptic system and the counterparts in the real world. An energy-compensating controller (ECC) is then designed to compensate for, in every sampling period, the energy leaks caused by work difference. The work difference exists both in entering and leaving periods of interaction contacts, which means the ECC not only removes the unwanted extra work from the virtual environment to eliminate potential non-passive system behaviors, but also compensates for the deficient work that should be done by the human operator to guarantee the intended rendering stiffness. The proposed method was tested and demonstrated on six human subjects with the implementation of a stiff-wall prototype haptic system via a Delta haptic device.	energy-compensating controller;work difference;perceived stiffness;haptic system;passivity theory "
     # str_test = re.sub(r'[^\u4e00-\u9fa5a-zA-Z0-9~!@#$%^&*()_+<>?:,./;’，。、‘：“《》？~！@#￥%……（）]', ' ', str_test)

@@ -429,6 +429,13 @@ def save_all_merged_results(result_list, save_dir):
     fp.close()
 
 
+# def save_merged_info(merged_info, info_save_dir):
+#     with codecs.open(info_save_dir, mode='w', encoding='utf-8') as wp:
+#         for one_info in merged_info:
+
+
+
+# 不能直接以字符串写入
 def save_es_search_results(es_results, es_dir):
     with codecs.open(es_dir,mode='w',encoding='utf-8') as wp:
         for result in es_results:
