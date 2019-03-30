@@ -130,3 +130,16 @@ venv.bak/
 /data/es_search.txt
 /evaluate_es_10w_doc2vec/
 /doc2vec/
+/evaluate_es_10w_doc2vec2/
+将删除 data/evaluate_rake.py
+将删除 data/get_search_results.py
+将删除 data/process_doc2vec.py
+将删除 data/process_doc2vec_eg1.py
+将删除 data/process_doc2vec_get_merge_info.py
+将删除 data/process_doc2vec_model10w.py
+将删除 data/process_doc2vec_test1.py
+将删除 data/process_temp.py
+将删除 data/rake_extract_keyphrase_12.json
+将删除 evaluate_es_10w_doc2vec2/
+将删除 ir_eg/
+将删除 test.py

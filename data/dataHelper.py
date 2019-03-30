@@ -81,7 +81,7 @@ def extract_keyphrase(json_obj, save_path):
             rake_string = []
             count = 0
             for tup in rake.get_ranked_phrases_with_scores():
-                if count >= 10:
+                if count > 12:
                     break
                 rake_string.append(str(tup[0]) + '|||' + tup[1])
                 count += 1

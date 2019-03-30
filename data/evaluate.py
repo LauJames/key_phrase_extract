@@ -18,6 +18,9 @@ def get_topK_kp(all_merged_kp, k):
             # try:
                 one_doc_kp_list.append(sorted_list[j][0])
             else:
+                print('k='+ str(k) + '=====len(sorted_list)=' + str(len(sorted_list)))
+                print('当前文章的rake：'+ str(sorted_list))
+                print('one_doc_kp_list.append: ' + str(one_doc_kp_list))
                 break
             # except (Exception) as e:
             #     print(e)
